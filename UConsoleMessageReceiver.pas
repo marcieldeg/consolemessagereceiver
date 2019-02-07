@@ -33,7 +33,7 @@ type
   private
     FWebBrowser: TWebBrowser;
     FShowInfo: Boolean;
-    procedure RegisterMessageReceiver;
+    procedure RegisterMessageReceiver(ARegister: Boolean);
     function Write(source: PWideChar; level: _DEV_CONSOLE_MESSAGE_LEVEL; messageId: SYSINT;
       messageText: PWideChar): HResult; stdcall;
     function WriteWithUrl(source: PWideChar; level: _DEV_CONSOLE_MESSAGE_LEVEL; messageId: SYSINT;
@@ -45,7 +45,6 @@ type
     procedure SetWebBrowser(AWebBrowser: TWebBrowser);
   public
     constructor Create(AOwner: TComponent); override;
-    procedure Loaded; override;
   published
     property WebBrowser: TWebBrowser read FWebBrowser write SetWebBrowser;
     property ShowInfo: Boolean read FShowInfo write FShowInfo default True;
@@ -128,42 +127,41 @@ begin
   Self.Font.Name := 'Courier';
 end;
 
-procedure TConsoleMessageReceiver.Loaded;
-begin
-  inherited;
-  //RegisterMessageReceiver;
-end;
-
-procedure TConsoleMessageReceiver.RegisterMessageReceiver;
+procedure TConsoleMessageReceiver.RegisterMessageReceiver(ARegister: Boolean);
 const
   IDM_ADDCONSOLEMESSAGERECEIVER = 3800;
   IDM_REMOVECONSOLEMESSAGERECEIVER = 3801;
   CGID_MSHTML: TGUID = '{DE4BA900-59CA-11CF-9592-444553540000}';
 var
   Comm: IOleCommandTarget;
+  Action: Cardinal;
 begin
   if csDesigning in ComponentState then
     Exit;
+
+  if ARegister then
+    Action := IDM_ADDCONSOLEMESSAGERECEIVER
+  else
+    Action := IDM_REMOVECONSOLEMESSAGERECEIVER;
 
   if Assigned(Self.FWebBrowser) then
   begin
     if not Assigned(Self.FWebBrowser.Document) then
       Self.FWebBrowser.Navigate('about:blank');
     if Supports(Self.FWebBrowser.Document, IOleCommandTarget, Comm) then
-      Comm.Exec(@CGID_MSHTML, IDM_ADDCONSOLEMESSAGERECEIVER, OLECMDEXECOPT_DODEFAULT,
-        IDeveloperConsoleMessageReceiver(Self), EmptyParam);
-  end
-  else if Assigned(Self.FWebBrowser.Document) then
-    if Supports(Self.FWebBrowser.Document, IOleCommandTarget, Comm) then
-      Comm.Exec(@CGID_MSHTML, IDM_REMOVECONSOLEMESSAGERECEIVER, OLECMDEXECOPT_DODEFAULT,
-        IDeveloperConsoleMessageReceiver(Self), EmptyParam);
+      Comm.Exec(@CGID_MSHTML, Action, OLECMDEXECOPT_DODEFAULT, IDeveloperConsoleMessageReceiver(Self), EmptyParam);
+  end;
 end;
 
 procedure TConsoleMessageReceiver.SetWebBrowser(AWebBrowser: TWebBrowser);
 begin
-  Self.Lines.Clear;
-  Self.FWebBrowser := AWebBrowser;
-  RegisterMessageReceiver;
+  if Self.FWebBrowser <> AWebBrowser then
+  begin
+    Self.Lines.Clear;
+    RegisterMessageReceiver(False);
+    Self.FWebBrowser := AWebBrowser;
+    RegisterMessageReceiver(True);
+  end;
 end;
 
 function TConsoleMessageReceiver.Write(source: PWideChar; level: _DEV_CONSOLE_MESSAGE_LEVEL; messageId: SYSINT;
