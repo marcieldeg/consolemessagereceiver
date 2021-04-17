@@ -135,6 +135,7 @@ const
 var
   Comm: IOleCommandTarget;
   Action: Cardinal;
+  OutVar: OleVariant;
 begin
   if csDesigning in ComponentState then
     Exit;
@@ -146,10 +147,11 @@ begin
 
   if Assigned(Self.FWebBrowser) then
   begin
+    OutVar := EmptyParam;
     if not Assigned(Self.FWebBrowser.Document) then
       Self.FWebBrowser.Navigate('about:blank');
     if Supports(Self.FWebBrowser.Document, IOleCommandTarget, Comm) then
-      Comm.Exec(@CGID_MSHTML, Action, OLECMDEXECOPT_DODEFAULT, IDeveloperConsoleMessageReceiver(Self), EmptyParam);
+      Comm.Exec(@CGID_MSHTML, Action, OLECMDEXECOPT_DODEFAULT, IDeveloperConsoleMessageReceiver(Self), OutVar);
   end;
 end;
 
